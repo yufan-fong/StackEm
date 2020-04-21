@@ -28,6 +28,12 @@ The top 10 highscores will be displayed the leaderboard on the starting screen. 
 
 ## Description of Code
 
+### *Block* Class
+
+Custom class to create *InstructionGroup* for each block that will be used in the game. <br>
+Blocks are objects in this class with attributes like x-y coordinates, size, shape and colour. <br>
+There is a `tower` list in GameWidget, containing all the block objects that make up the tower. <br>
+
 ### State Machines
 
 **Colour** <br>
@@ -136,7 +142,7 @@ The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*po
    Creates text input box for username and button to change to the play screen. <br>
    
 - check_highscores(self) <br>
-   Processes the content inside'highscores.txt'. <br>
+   Processes the content inside 'highscores.txt'. <br>
    Returns a dictionary containing the scores and usernames. <br>
    
 - sort_highscores(self, highscores) <br>
