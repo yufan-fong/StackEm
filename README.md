@@ -34,6 +34,8 @@ The top 10 highscores will be displayed the leaderboard on the starting screen. 
 
 The colour of the blocks are cycled through red, green and blue using an infinite `colourSM` state machine that does not require any input. The state machine steps through the colours as shown below. <br>
 
+**Time Step Diagram for `colourSM`** <br>
+
 | Time       | 0     | 1     | 2     | 3     | 4     | 5     |...  |
 |:----------:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|:---:|
 | State      |'blue' |'red'  |'green'|'blue' |'red'  |'green'|...  |
@@ -55,7 +57,7 @@ The colour of the blocks are cycled through red, green and blue using an infinit
 | -5       | 0.92 | 5       | 0.92 |
 | 0        | 1    |         |      | <br>
 
-There is a coefficient attribute for each state machine to determine the step size. <br>
+Each state machine has a coefficient attribute to determine the step size. <br>
 `move_blockSM` has a coefficient of 6. `move_towerSM` has a coefficient of 2. <br>
 The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*pos)`. <br>
 
