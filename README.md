@@ -30,9 +30,9 @@ The top 10 highscores will be displayed the leaderboard on the starting screen. 
 
 ### *Block* Class
 
-Custom class to create *InstructionGroup* for each block that will be used in the game. <br>
-Blocks are objects in this class with attributes like x-y coordinates, size, shape and colour. <br>
-There is a `tower` list in GameWidget, containing all the block objects that make up the tower. <br>
+- Custom class to create *InstructionGroup* for each block that will be used in the game. <br>
+- Blocks are objects in this class with attributes like x-y coordinates, size, shape and colour. <br>
+- There is a `tower` list in GameWidget, containing all the block objects that make up the tower. <br>
 
 ### State Machines
 
@@ -63,9 +63,9 @@ The colour of the blocks are cycled through red, green and blue using an infinit
 | -5       | 0.92 | 5       | 0.92 |
 | 0        | 1    |         |      | <br>
 
-Each state machine has a coefficient attribute to determine the step size. <br>
-`move_blockSM` has a coefficient of 6. `move_towerSM` has a coefficient of 2. <br>
-The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*pos)`. <br>
+- Each state machine has a coefficient attribute to determine the step size. <br>
+- `move_blockSM` has a coefficient of 6. `move_towerSM` has a coefficient of 2. <br>
+- The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*pos)`. <br>
 
 **Time Step Diagram for `move_towerSM`** <br>
 
@@ -83,28 +83,39 @@ The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*po
 
 ### Game Widget
 
+**Class Variables:** <br>
+
+- *drop*: Boolean variable to allow the building block to drawn as dropping. <br>
+- *lose*: Boolean variable to restrict SPACE BAR and prevent further dropping. <br>
+- *tower*: a list containing all the Block objects making up the tower. <br>
+- *next_block*: a Block object for the next building block to be dropped. <br>
+- *score*: integer variable to be changed and displayed as the game progresses. <br>
+- *speed*: float variable to be changed and displayed as the game progresses. <br>
+
 **Methods:** <br>
-- \_\_init\_\_(self, \*\*kwargs) <br>
+
+- *\_\_init\_\_(self, \*\*kwargs)* <br>
    Keyboard is requested in case the player does not enter his username. <br>
+   Creates custom event 'on_land' to dispatch `self.check_landing`. <br>
    Draws the labels for aim, lose, score and speed on the widget's canvas. <br>
    Uses `Clock.schedule_interval` to call `move_tower, move_block, drop_block, check_tower` at the specified interval. <br>
    
-- move_tower(self,dt) <br>
+- *move_tower(self,dt)* <br>
    Uses the output from `move_towerSM` to change the x coordinate of the blocks in the tower. <br>
    Redraws the blocks in `self.tower` tower based on the new coordinates. <br>
    
-- move_block(self,dt) <br>
+- *move_block(self,dt)* <br>
    Uses the output from `move_blockSM` to change the x coordinate of the building block. <br>
    Redraws the block based on the new coordinates. <br>
    
-- check_tower(self,dt) <br>
+- *check_tower(self,dt)* <br>
    Ensures thats the height of the tower is at most 4 blocks by removing the bottommost block from `self.tower`. <br>
    
-- drop_block(self,dt) <br>
+- *drop_block(self,dt)* <br>
    Drops the block onto the same height as the top of the tower once the SPACE BAR is pressed. <br>
    Once the block reaches the top of the tower, this function calls `self.check_landing()` <br>
    
-- check_landing(self) <br>
+- *check_landing(self,value,dt)* <br>
    Checks the position of the dropped block relative to the topmost block of the tower. <br>
    Adjusts the speed and score according to the aim. <br>
    Resets the variables to preapre for next landing. <br>
@@ -112,62 +123,78 @@ The step is the output of `oscillateSM`, where `step = self.coeff*np.cos(unit*po
    This function calls `self.update_speed(), self.update_score()` to update the speed and score label. <br>
    This function calls `self.draw_new_block()` to create a new block. <br>
    
-- update_labels(self) <br>
+- *update_labels(self)* <br>
+   Called by self.check_landing. <br>
    Updates the aim and lose label accordingly. <br>
    
-- update_speed(self) <br>
+- *update_speed(self)* <br>
+   Called at the end of self.check_landing. <br>
    Updates the speed label accordingly. <br>
    
-- update_score(self) <br>
+- *update_score(self)* <br>
+   Called at the end of self.check_landing. <br>
    Updates the score label accordingly. <br>
    
-- draw_new_block(self) <br>
+- *draw_new_block(self)* <br>
+   Called at the end of self.check_landing. <br>
    Restart `move_blockSM` and redraw next building block. <br>
    
-- restart(self) <br>
+- *restart(self)* <br>
    Remove drawing of the tower and next building block. <br>
    Redraws base block for the tower and next building block. <br>
    Resets the `move_blockSM` and `move_towerSM`. <br>
    Resets score, speed, all labels and class variables. <br>
    
-- keyboard_closed(self) and on_keyboard_down(self, keyboard, keycode, text, modifiers) <br>
-   Functions needed to listen to keyboard events. <br>
+- *on_land(self,dt)* <br>
+   Default handler for custom event 'on_land'. <br>
+   
+- *keyboard_closed(self)* <br>
+   Execute when self.keyboard is closed. <br>
+
+- *on_keyboard_down(self, keyboard, keycode, text, modifiers)* <br>
+   Listens for SPACE BAR key down to trigger self.drop_block() <br>
    
 ### Start Screen
 
+**Class Variables:** <br>
+
+- *username*: string variable to store the username input from player. <br>
+- *sorted_scores*: list variable to store the scores in descending order. <br>
+- *sorted_names*: list variable to store the usersnames based on `sorted_scores`. <br>
+
 **Methods:** <br>
-- \_\_init\_\_(self, \*\*kwargs) <br>
+- *\_\_init\_\_(self, \*\*kwargs)* <br>
    Calls `self.check_highscore(), self.sort_highscores(), self.display_highscores()` to display the leaderboard. <br>
    Draws the labels for welcome, leaderboard and username on the widget's canvas. <br>
    Creates text input box for username and button to change to the play screen. <br>
    
-- check_highscores(self) <br>
+- *check_highscores(self)* <br>
    Processes the content inside 'highscores.txt'. <br>
    Returns a dictionary containing the scores and usernames. <br>
    
-- sort_highscores(self, highscores) <br>
+- *sort_highscores(self, highscores)* <br>
    `highscores` parameter is a dictionary from check_highscores. <br>
    Returns a list `sorted_scores` in descending order and corresponding names in the list `sorted_names`. <br>
    
-- prepare_panels(self) <br>
+- *prepare_panels(self)* <br>
    Prepares 2 strings containing the top 5 and 6th-10th highscore into `self.panel_1` and `self.panel_2` respectively. <br>
    
-- change_to_play(self,value) <br>
+- *change_to_play(self,value)* <br>
    Changes screen to the play screen. <br>
    
 ### Play Screen
 
 **Methods:** <br>
-- \_\_init\_\_(self, \*\*kwargs) <br>
+- *\_\_init\_\_(self, \*\*kwargs)* <br>
    Creates buttons for return, restart and save. <br>
    Creates text input box for username and button to change to the play screen. <br>
    
-- change_to_start(self,value) <br>
+- *change_to_start(self,value)* <br>
    Changes screen to the start screen. <br>
    
-- restart_game(self,value) <br>
+- *restart_game(self,value)* <br>
    Calls `GameWidget.restart(self)` <br>
    
-- save_game(self,value) <br>
+- *save_game(self,value)* <br>
    Update the score of the player if username already exists. <br>
    Rewrite `highscores.txt` with the updated scores. <br>
