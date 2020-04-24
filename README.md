@@ -184,6 +184,10 @@ The colour of the blocks are cycled through red, green and blue using an infinit
    Prepares 2 strings containing the top 5 and 6th-10th highscore into `self.panel1_text` and `self.panel2_text` respectively. <br>
    Changes the text in panel1 and panel2. <br>
    
+- *refresh_leaderboard(self,value)* <br>
+   Resets the string variable `self.panel1_text` and `self.panel2_text` to be empty. <br>
+   Calls `self.check_highscore(), self.sort_highscores(), self.display_leaderboard()` to display the updates. <br>
+   
 - *change_to_play(self,value)* <br>
    Changes screen to the play screen. <br>
    
