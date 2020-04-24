@@ -161,12 +161,16 @@ The colour of the blocks are cycled through red, green and blue using an infinit
 - *username*: string variable to store the username input from player. <br>
 - *sorted_scores*: list variable to store the scores in descending order. <br>
 - *sorted_names*: list variable to store the usersnames based on `sorted_scores`. <br>
+- *panel1_text*: string variable to store text for panel1. <br>
+- *panel2_text*: string variable to store text for panel2. <br>
+
 
 **Methods:** <br>
 - *\_\_init\_\_(self, \*\*kwargs)* <br>
-   Calls `self.check_highscore(), self.sort_highscores(), self.display_highscores()` to display the leaderboard. <br>
-   Draws the labels for welcome, leaderboard and username on the widget's canvas. <br>
-   Creates text input box for username and button to change to the play screen. <br>
+   Draws the labels for welcome, leaderboard, panels and username on the widget's canvas. <br>
+   Creates text input box for username. <br>
+   Created buttons to change to the play screen and refresh leaderboard. <br>   
+   Calls `self.check_highscore(), self.sort_highscores(), self.display_leaderboard()` to display the leaderboard. <br>
    
 - *check_highscores(self)* <br>
    Processes the content inside 'highscores.txt'. <br>
@@ -176,8 +180,9 @@ The colour of the blocks are cycled through red, green and blue using an infinit
    `highscores` parameter is a dictionary from check_highscores. <br>
    Returns a list `sorted_scores` in descending order and corresponding names in the list `sorted_names`. <br>
    
-- *prepare_panels(self)* <br>
-   Prepares 2 strings containing the top 5 and 6th-10th highscore into `self.panel_1` and `self.panel_2` respectively. <br>
+- *display_leaderboard(self)* <br>
+   Prepares 2 strings containing the top 5 and 6th-10th highscore into `self.panel1_text` and `self.panel2_text` respectively. <br>
+   Changes the text in panel1 and panel2. <br>
    
 - *change_to_play(self,value)* <br>
    Changes screen to the play screen. <br>
