@@ -18,9 +18,7 @@ The building block and tower oscillate out of sync and their speed changes depen
 
 The maximum speed is capped at *2.0*. <br>
 The score increases by one for every successful landing. <br>
-The score, current speed and landing accuracy are displayed on the right. <br>
-
-![SEsnapshot](https://user-images.githubusercontent.com/58071981/79825129-be720f80-83ca-11ea-9ef1-b70b9c3362ed.jpg) <br>
+The score, current speed and landing accuracy are displayed on the right. <br> <br>
 
 Players can click on the *Restart* button to restart the game. <br>
 Players are able to enter their username and save their highscores. <br>
@@ -207,4 +205,3 @@ The colour of the blocks are cycled through red, green and blue using an infinit
 - *save_game(self,value)* <br>
    Update the score of the player if username already exists. <br>
    Rewrite `highscores.txt` with the updated scores. <br>
->>>>>>> yufan-fong-patch-1
