@@ -110,10 +110,13 @@ The colour of the blocks are cycled through red, green and blue using an infinit
    Ensures thats the height of the tower is at most 4 blocks by removing the bottommost block from `self.tower`. <br>
    
 - *drop_block(self,dt)* <br>
+   The block moves at a constant speed using the formula `450*dt` to change its y-coordinate. <br>
+   Regardless of the value of dt, the block will drop at a speed of 450 pixels per second. <br>
    Drops the block onto the same height as the top of the tower once the SPACE BAR is pressed. <br>
-   Once the block reaches the top of the tower, this function calls `self.check_landing()` <br>
+   Once the block reaches the top of the tower, this function dispatches the event `on_land` <br>
    
 - *check_landing(self,value,dt)* <br>
+   This function is bound to the event `on_land`. <br>
    Checks the position of the dropped block relative to the topmost block of the tower. <br>
    Adjusts the speed and score according to the aim. <br>
    Resets the variables to preapre for next landing. <br>
