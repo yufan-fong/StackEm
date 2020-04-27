@@ -1,5 +1,6 @@
 # Stack 'Em!
 
+<<<<<<< HEAD
 Goal: To build the highest tower by stacking the blocks. <br>
 Colons can be used to align columns.
 
