@@ -15,7 +15,8 @@ import numpy as np
 
 class Block:
     '''
-    Custom class to create InstructionGroup for each block that will be used in the game.
+    Custom class to create InstructionGroup for 
+    each block that will be used in the game.
     '''
     def __init__(self,x,y):
         self.x = x
@@ -41,7 +42,10 @@ class Block:
         
 # State Machines
 class SM:    
-    '''Custom state machine parent class that does not require input'''
+    '''
+    Custom state machine parent class
+    that does not require inputs.
+    '''
     def __init__(self):
         self.state = None
         
@@ -55,7 +59,9 @@ class SM:
         return output    
     
 class colourSM(SM):
-    '''To vary the colour of the blocks'''
+    '''
+    To vary the colour of the blocks.
+    '''
     start_state = 'blue'
     
     def get_next_values(self,state):
@@ -70,7 +76,9 @@ class colourSM(SM):
     
     
 class oscillateSM(SM):
-    '''To vary the speed of the tower as the game progresses'''
+    '''
+    To vary the speed of the blocks as the game progresses.
+    '''
     start_state = ['RIGHT',0]
     coeff = 0
     
@@ -108,7 +116,7 @@ move_towerSM.coeff = 2
 
 
 class GameWidget(Widget):
-    drop,lose,new_start,land = (False,False,False,False)
+    drop,lose = (False,False)
     tower = [Block(230,0)]
     next_block = Block(230,520)
     
@@ -117,8 +125,13 @@ class GameWidget(Widget):
     
     def __init__(self,**kwargs):
         Widget.__init__(self,**kwargs)
+        # create keyboard
         self.keyboard = Window.request_keyboard(self.keyboard_closed, self)
         self.keyboard.bind(on_key_down=self.on_keyboard_down)
+        
+        # custom events
+        self.register_event_type('on_land')
+        self.bind(on_land=self.check_landing)
         
         # canvas core labels        
         self.lose_label = CoreLabel(text='',font_size=40)
@@ -153,15 +166,16 @@ class GameWidget(Widget):
         self.canvas.add(line_instruction)
         self.canvas.add(self.next_block.instruction)
         
-        # functions
+        # run these functions continuously
         Clock.schedule_interval(self.move_tower,0.02)
         Clock.schedule_interval(self.move_block, 0.04)
-        Clock.schedule_interval(self.drop_block,0)
+        Clock.schedule_interval(self.drop_block,0.0120)
         Clock.schedule_interval(self.check_tower,0)
         
     def move_tower(self,dt):
         '''
-        Oscillates the towers based on the step size from move_towerSM
+        Oscillates the towers based on 
+        the step size from move_towerSM.
         '''
         step_size = move_towerSM.step()
         for towerblock in self.tower:
@@ -173,7 +187,8 @@ class GameWidget(Widget):
     
     def move_block(self,dt):
         '''
-        Oscillates the building block based on the step size from move_blockSM
+        Oscillates the building block based on 
+        the step size from move_blockSM.
         '''
         if self.drop == False:
             step_size = move_blockSM.step()
@@ -185,7 +200,8 @@ class GameWidget(Widget):
             
     def check_tower(self,dt):
         '''
-        Removes the bottommost block if tower is more than 4 blocks tall.
+        Removes the bottommost block if 
+        tower is more than 4 blocks tall.
         '''
         if len(self.tower) == 5:
             self.canvas.remove(self.tower[0].instruction)
@@ -199,14 +215,15 @@ class GameWidget(Widget):
         '''
         Drops the building block was the SPACEBAR is pressed.
         '''
-        if self.drop == False or self.lose == True:
+        if self.drop == False:
             return
         
         current_y = self.next_block.y
         top_towerblock = len(self.tower)-1
         top_towerblock_y = self.tower[top_towerblock].y
+        height = self.tower[top_towerblock].size[1]
         
-        if current_y > top_towerblock_y+60:
+        if current_y > top_towerblock_y+height:
             # change y coordinate and redraw
             self.canvas.remove(self.next_block.instruction)
             self.next_block.y -= 5
@@ -214,17 +231,16 @@ class GameWidget(Widget):
             self.next_block.instruction.add(self.next_block.shape)
             self.canvas.add(self.next_block.instruction)
             
-        if current_y == top_towerblock_y+60:
+        if current_y == top_towerblock_y+height:
             # stop dropping
             self.drop = False
             
-            # block has landed
-            self.land = True
-            self.check_landing()
+            self.dispatch('on_land',dt)
     
-    def check_landing(self):
+    def check_landing(self,value,dt):
         '''
-        Checks the accuracy of the landing. Update score, speed and labels accordingly.
+        Checks the accuracy of the landing. 
+        Update score, speed and labels accordingly.
         '''
         top_block = len(self.tower)-1
         top_x = self.tower[top_block].x
@@ -240,6 +256,7 @@ class GameWidget(Widget):
         # successful landing
         else:
             self.score += 1
+            
             # bad landing        
             if self.next_block.x<top_x-0.5*width or self.next_block.x>top_x+0.5*width:
                 if move_towerSM.coeff<=14:
@@ -267,8 +284,7 @@ class GameWidget(Widget):
         # append next_block to self.tower
         self.tower.append(self.next_block)
         
-        # reset for next landing
-        self.land = False
+        # update labels, draw new building block
         self.update_speed()
         self.update_score()
         self.draw_new_block()
@@ -278,17 +294,21 @@ class GameWidget(Widget):
         Updates aim and lose label.
         '''
         if result == 'lose':
+            self.aim_label.text = ''
+            
             self.lose_label.text = "OH NO! YOU LOST!"
             self.lose_label.refresh()
             self.lose_instruction.texture = self.lose_label.texture
             self.lose_instruction.size = self.lose_label.texture.size
-            self.aim_label.text = ''             
+            
         elif result == 'restart':
+            self.aim_label.text = ''
+            
             self.lose_label.text = ''
             self.lose_label.refresh()
             self.lose_instruction.texture = self.lose_label.texture
             self.lose_instruction.size = self.lose_label.texture.size
-            self.aim_label.text = ''
+            
         else:
             self.aim_label.text = result
         self.aim_label.refresh()
@@ -323,7 +343,8 @@ class GameWidget(Widget):
             
     def restart(self):
         '''
-        Reset tower and building blocks, SM, class variables and labels.
+        Reset tower and building blocks, 
+        SM, class variables and labels.
         '''
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
@@ -340,15 +361,21 @@ class GameWidget(Widget):
         self.speed = 1.0
         self.update_score()
         self.update_speed()
-        self.drop,self.lose,self.new_start,self.land = (False,False,False,False)
         self.update_labels('restart')
+        self.drop,self.lose = (False,False)
         
+    def on_land(self,dt):
+        '''
+        Default handler for the custom event 'on_land'.
+        '''
+        pass       
+    
     def keyboard_closed(self):
         pass
     
     def on_keyboard_down(self, keyboard, keycode, text, modifiers):
         '''
-        Listen for SPACE BAR key down to trigger self.drop_block.
+        Listens for SPACE BAR key down to trigger self.drop_block().
         '''
         if self.manager.current == 'play':
             if keycode[1] == 'spacebar' and self.lose == False:
@@ -357,6 +384,7 @@ class GameWidget(Widget):
         
 class StartScreen(Screen):
     username = ''
+    
     sorted_names = []
     sorted_scores = []
     
@@ -415,7 +443,8 @@ class StartScreen(Screen):
         
     def check_highscores(self):
         '''
-        Reads the file highscores.txt and returns a dictionary containing all the names and scores.
+        Reads the file highscores.txt and 
+        returns a dictionary containing all the names and scores.
         '''
         highscores = {}
         f = open("highscores.txt",'r')
@@ -431,7 +460,8 @@ class StartScreen(Screen):
     
     def sort_highscores(self,highscores):
         '''
-        Returns a list of sorted_scores in descending order and the corresponding names in sorted_names.
+        Returns a list of sorted_scores in descending order 
+        and the corresponding names in sorted_names.
         '''
         sorted_scores = []
         sorted_names = []
@@ -467,10 +497,6 @@ class StartScreen(Screen):
                     self.panel_2+=score+'  '+sorted_names[i]+'\n'
             except:
                 pass
-        
-        # change text in lbl_panel 1 & 2
-#         self.lbl_panel_1.text = self.panel_1
-#         self.lbl_panel_2.text = self.panel_2
     
     def change_to_play(self,value):
         '''
@@ -511,15 +537,6 @@ class PlayScreen(Screen,GameWidget):
         '''
         self.manager.transition.direction='right'
         self.manager.current='start'
-#         self.manage_highscores(self)
-        
-#     def manage_highscores(self,value):
-#         '''
-#         Update the highscores and display leaderboard.
-#         '''
-#         highscores = StartScreen.check_highscores(self)
-#         sorted_names,sort_scores = StartScreen.sort_highscores(self,highscores)
-#         StartScreen.prepare_panels(self,sorted_names,sort_scores)
         
     def restart_game(self,value):
         '''
@@ -529,12 +546,17 @@ class PlayScreen(Screen,GameWidget):
         
     def save_game(self,value):
         '''
-        Saves the player's username and score into the file highscores.txt.
+        Saves the player's username and 
+        score into the file highscores.txt.
         '''       
         if StartScreen.username == '':
+            # player did not enter username
             return
-        elif StartScreen.username not in StartScreen.sorted_names:
-            # add new entry if username does not exist 
+        
+        if StartScreen.username not in StartScreen.sorted_names:
+            # add new entry if username does not exist
+            StartScreen.sorted_names.append(StartScreen.username)
+            StartScreen.sorted_scores.append(self.score)
             f = open('highscores.txt','a')
             f.write('{},{}\n'.format(StartScreen.username,self.score))
         else:
@@ -554,9 +576,6 @@ class PlayScreen(Screen,GameWidget):
 # Run the game        
 class StackEmApp(App):
     def build(self):
-        '''
-        Add screens to SreenManager
-        '''
         sm = ScreenManager()
         start_screen = StartScreen(name='start')
         play_screen = PlayScreen(name='play')
