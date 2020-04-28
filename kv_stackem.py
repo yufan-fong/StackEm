@@ -11,11 +11,14 @@ from kivy.clock import Clock
 
 Window.size = (500,650)
 
+'''Learn how to remove instruction from canvas'''
+
 class Block:
     def __init__(self,x,y):
         self.x = x
         self.y = y
         self.size = (40,60)
+        self.instruction = None
         
         # get the next colour each time a new block is created
         colour_machine.step()
@@ -68,21 +71,21 @@ class GameWidget(Widget):
             Color(1,1,1,1)
             Line(points=[0,568,500,568],width=2)
         
-        delay = 0
-        Clock.schedule_interval(self.draw_tower,delay)
+        delay = 0.02
+        Clock.schedule_interval(self.draw_tower,0.5)
         Clock.schedule_interval(self.draw_next_block,delay)            
         Clock.schedule_interval(self.drop_next_block,delay)
         
     def draw_tower(self,dt):
         with self.canvas:
-            for block in self.tower:
-                if block.colour == 'red':
+            for towerblock in self.tower:
+                if towerblock.colour == 'red':
                     Color(1,0,0,1)
-                elif block.colour == 'green':
+                elif towerblock.colour == 'green':
                     Color(0,1,0,1)
-                elif block.colour == 'blue':
+                elif towerblock.colour == 'blue':
                     Color(0,0,1,1)
-                Rectangle(pos=(block.x,block.y),size=block.size)
+                towerblock.instruction = Rectangle(pos=(towerblock.x,towerblock.y),size=towerblock.size)
                 
     def draw_next_block(self,dt):
         if self.new_start == True:
@@ -97,24 +100,24 @@ class GameWidget(Widget):
                     Color(0,0,1,1)
                 # draw the new Block object on canvas &
                 # call it new_block_canvas
-                self.new_block_canvas = Rectangle(pos=(self.next_block.x,self.next_block.y),size=self.next_block.size)
+                self.next_block_instruction = Rectangle(pos=(self.next_block.x,self.next_block.y),size=self.next_block.size)
                 self.new_start = False
                 
         
     def drop_next_block(self,dt):
-        current_y = self.new_block_canvas.pos[1]
+        current_y = self.next_block_instruction.pos[1]
         top_block = len(self.tower)-1
-        top_block_y = self.tower[top_block].y
+        top_tower_block_y = self.tower[top_block].y
         # comparing y values
-        if self.drop == True and current_y > top_block_y+60:
+        if self.drop == True and current_y > top_tower_block_y+60:
             current_y -= 10
             # redraw the block on canvas
-            self.new_block_canvas.pos = (self.new_block_canvas.pos[0],current_y)
-        if current_y == top_block_y+60:
+            self.next_block_canvas.pos = (self.next_block_instruction.pos[0],current_y)
+        if current_y == top_tower_block_y+60:
             # stop dropping
             self.drop = False
             # change position of next_block
-            self.next_block.x,self.next_block.y = self.new_block_canvas.pos
+            self.next_block.x,self.next_block.y = self.next_block_instruction.pos
             self.tower.append(self.next_block)
             self.new_start = True
             
