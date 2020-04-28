@@ -169,7 +169,7 @@ class GameWidget(Widget):
         # run these functions continuously
         Clock.schedule_interval(self.move_tower,0.02)
         Clock.schedule_interval(self.move_block, 0.04)
-        Clock.schedule_interval(self.drop_block,0.0120)
+        Clock.schedule_interval(self.drop_block,0)
         Clock.schedule_interval(self.check_tower,0)
         
     def move_tower(self,dt):
@@ -226,13 +226,14 @@ class GameWidget(Widget):
         if current_y > top_towerblock_y+height:
             # change y coordinate and redraw
             self.canvas.remove(self.next_block.instruction)
-            self.next_block.y -= 5
+            self.next_block.y -= 450*dt
             self.next_block.shape.pos = (self.next_block.x,self.next_block.y)
             self.next_block.instruction.add(self.next_block.shape)
             self.canvas.add(self.next_block.instruction)
             
-        if current_y == top_towerblock_y+height:
+        if current_y <= top_towerblock_y+height:
             # stop dropping
+            self.next_block.y = top_towerblock_y+height
             self.drop = False
             
             self.dispatch('on_land',dt)
@@ -259,19 +260,19 @@ class GameWidget(Widget):
             
             # bad landing        
             if self.next_block.x<top_x-0.5*width or self.next_block.x>top_x+0.5*width:
+                self.update_labels('Bad..')
                 if move_towerSM.coeff<=14:
                     move_towerSM.coeff *= 1.2
                     move_blockSM.coeff *= 1.2
-                    self.speed += 0.2
-                    self.update_labels('Bad..')
+                    self.speed += 0.2                    
                     
             # good landing        
             elif self.next_block.x<top_x-0.1*width or self.next_block.x>top_x+0.1*width:
+                self.update_labels('Good')
                 if move_towerSM.coeff<=14:
                     move_towerSM.coeff *= 1.1
                     move_blockSM.coeff *= 1.1
                     self.speed += 0.1
-                    self.update_labels('Good')
                     
             # great landing
             else:
@@ -388,57 +389,70 @@ class StartScreen(Screen):
     sorted_names = []
     sorted_scores = []
     
+    panel1_text = ''
+    panel2_text = ''
+    
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
-        self.panel_1 = ''
-        self.panel_2 = ''
-        
-        # prepare data and string text for leaderboard
-        highscores = self.check_highscores()
-        sorted_names,sorted_scores = self.sort_highscores(highscores)
-        self.prepare_panels(sorted_names,sorted_scores)
 
-        # labels
         self.layout = FloatLayout(size=(500,650))
         
+        # welcone label
         lbl_welcome = Label(text="Welcome to \n Stack 'Em!", font_size=50, 
                             pos_hint={'top': 0.95,'center_x':0.5}, 
                             size_hint = (0.5,0.3))
         self.layout.add_widget(lbl_welcome)
         
+        # leaderboard label
         lbl_leaderboard = Label(text="Leaderboard",font_size=25, 
                             pos_hint={'center_x':0.5,'y':0.42}, 
                             size_hint=(0.3,0.3))
         self.layout.add_widget(lbl_leaderboard)
         
-        self.lbl_panel_1 = Label(text=self.panel_1,font_size=15, 
-                            pos_hint={'right': 0.5,'y':0.3}, 
+        # panel 1 label
+        self.lbl_panel1 = Label(text=self.panel1_text,font_size=15, 
+                            pos_hint={'right': 0.5,'y':0.28}, 
                             size_hint=(0.3,0.3))
-        self.layout.add_widget(self.lbl_panel_1)
+        self.layout.add_widget(self.lbl_panel1)
         
-        self.lbl_panel_2 = Label(text=self.panel_2,font_size=15, 
-                            pos_hint={'x': 0.5,'y':0.3}, 
+        # panel 2 label
+        self.lbl_panel2 = Label(text=self.panel2_text,font_size=15, 
+                            pos_hint={'x': 0.5,'y':0.28}, 
                             size_hint=(0.3,0.3))
-        self.layout.add_widget(self.lbl_panel_2)
+        self.layout.add_widget(self.lbl_panel2)
         
+        # username label
         lbl_username = Label(text="Username: ",font_size=25,
                             pos_hint={'right':0.5,'y':0.25},
                             size_hint=(0.3,0.05))
         self.layout.add_widget(lbl_username)
         
-        # text input and button        
+        # username text input       
         self.ti_username = TextInput(text='',multiline=False,
                                 pos_hint={'x':0.5,'y':0.25},
                                 size_hint=(0.3,0.05))
         self.layout.add_widget(self.ti_username)
         
+        # play button
         btn_play = Button(text='Play!', font_size = 30, 
                           pos_hint={'top':0.2,'center_x':0.5}, 
                           size_hint = (0.4,0.15),
                           on_release=self.change_to_play)
         self.layout.add_widget(btn_play)
         
+        # refresh button
+        btn_refresh = Button(text='Refresh',font_size=12,
+                            pos_hint={'center_x':0.7,'y':0.55},
+                            size_hint=(0.1,0.04),
+                            on_release=self.refresh_leaderboard)
+        self.layout.add_widget(btn_refresh)
+        
         self.add_widget(self.layout)
+        
+        # prepare data and string text for leaderboard/panels
+        highscores = self.check_highscores()
+        sorted_names,sorted_scores = self.sort_highscores(highscores)
+        self.display_leaderboard(sorted_names,sorted_scores)
         
         
     def check_highscores(self):
@@ -481,9 +495,10 @@ class StartScreen(Screen):
         StartScreen.sorted_scores = sorted_scores
         return sorted_names,sorted_scores
     
-    def prepare_panels(self,sorted_names,sorted_scores):
+    def display_leaderboard(self,sorted_names,sorted_scores):
         '''
         Prepares the text to be displayed on the leaderboard.
+        Changes text in the panels.
         '''
         for i in range(0,11):
             try:
@@ -492,11 +507,24 @@ class StartScreen(Screen):
                 else:
                     score=str(sorted_scores[i])
                 if i<5:
-                    self.panel_1+=score+'  '+sorted_names[i]+'\n'
+                    self.panel1_text+=score+'  '+sorted_names[i]+'\n'
                 else:
-                    self.panel_2+=score+'  '+sorted_names[i]+'\n'
+                    self.panel2_text+=score+'  '+sorted_names[i]+'\n'
             except:
                 pass
+        # change text in lbl_panel 1 & 2
+        self.lbl_panel1.text = self.panel1_text
+        self.lbl_panel2.text = self.panel2_text
+        
+    def refresh_leaderboard(self,value):
+        '''
+        Update the highscores and display leaderboard.
+        '''
+        self.panel1_text = ''
+        self.panel2_text = ''
+        highscores = self.check_highscores()
+        sorted_names,sort_scores = self.sort_highscores(highscores)
+        self.display_leaderboard(sorted_names,sort_scores)
     
     def change_to_play(self,value):
         '''

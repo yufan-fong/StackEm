@@ -1,0 +1,7 @@
+Vulf,25
+Fedex,24
+Jami,20
+Ming,10
+Koda,6
+Edward,6
+Stevie,4
