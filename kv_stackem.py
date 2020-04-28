@@ -5,7 +5,6 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label, CoreLabel
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics.vertex_instructions import Rectangle,Line
 from kivy.graphics.context_instructions import Color
@@ -13,13 +12,18 @@ from kivy.clock import Clock
 from kivy.graphics.instructions import InstructionGroup
 import numpy as np
 
+
 class Block:
+    '''
+    Custom class to create InstructionGroup for each block that will be used in the game.
+    '''
     def __init__(self,x,y):
         self.x = x
         self.y = y
         self.size = (40,60)
         self.shape = Rectangle(pos=(self.x,self.y),
                                size=self.size)
+        
         # get the next colour each time a new block is created
         colour_machine.step()
         if colour_machine.state == 'red':
@@ -28,11 +32,14 @@ class Block:
             self.colour = Color(0,1,0,1)
         elif colour_machine.state == 'blue':
             self.colour = Color(0,0,1,1)
-            
+        
+        # create canvas instruction
         self.instruction = InstructionGroup()
         self.instruction.add(self.colour)
         self.instruction.add(self.shape)
+
         
+# State Machines
 class SM:    
     '''Custom state machine parent class that does not require input'''
     def __init__(self):
@@ -68,43 +75,40 @@ class oscillateSM(SM):
     coeff = 0
     
     def get_next_values(self, state):
-        x_norm = np.pi/2/20
-        unit = x_norm*state[1]
-        if state[0] == 'RIGHT':
-            if state[1] < 20:
-                output = self.coeff*np.cos(unit)
+        unit = np.pi/2/20
+        direction = state[0]
+        pos = state[1]
+        step = self.coeff*np.cos(unit*pos)
+        if direction == 'RIGHT':
+            output = step
+            if pos < 20:
                 ns = ['RIGHT', state[1]+1]
-            else:
-                # state[1] is 20
-                output = 0
+            else:    # position is 20
                 ns = ['LEFT', state[1]-1]
                 
-        if state [0] == 'LEFT':
-            if state[1] > -20:
-                output = -self.coeff*np.cos(unit)
+        elif direction == 'LEFT':
+            output = -step
+            if pos > -20:
                 ns = ['LEFT', state[1]-1]
-            else:
-                # state[1] is -20
-                output = 0
+            else:     # position is -20
                 ns = ['RIGHT', state[1]+1]
         return ns, output
-    
+
+# start the state machines
 colour_machine = colourSM()
 colour_machine.start()
 
 move_blockSM = oscillateSM()
 move_blockSM.start()
-move_blockSM.coeff = 6
+move_blockSM.coeff = 4
 
 move_towerSM = oscillateSM()
 move_towerSM.start()
 move_towerSM.coeff = 2
-##################### SM ########################
 
 
 class GameWidget(Widget):
     drop,lose,new_start,land = (False,False,False,False)
-    
     tower = [Block(230,0)]
     next_block = Block(230,520)
     
@@ -116,30 +120,30 @@ class GameWidget(Widget):
         self.keyboard = Window.request_keyboard(self.keyboard_closed, self)
         self.keyboard.bind(on_key_down=self.on_keyboard_down)
         
-        # canvas labels        
+        # canvas core labels        
         self.lose_label = CoreLabel(text='',font_size=40)
         self.lose_label.refresh()
         self.lose_instruction = Rectangle(texture=self.lose_label.texture,
                                           pos=(85,430),size=self.lose_label.texture.size)
         
-        self.land_label = CoreLabel(text='',font_size=20)
-        self.land_label.refresh()
-        self.land_instruction = Rectangle(texture=self.land_label.texture,
-                                         pos=(70,300),size=self.land_label.texture.size)
+        self.aim_label = CoreLabel(text='',font_size=20)
+        self.aim_label.refresh()
+        self.aim_instruction = Rectangle(texture=self.aim_label.texture,
+                                         pos=(415,300),size=self.aim_label.texture.size)
         
-        self.score_label = CoreLabel(text='Score: 0',font_size=16)
+        self.score_label = CoreLabel(text='Score: 0',font_size=20)
         self.score_label.refresh()
         self.score_instruction = Rectangle(texture=self.score_label.texture,
-                                          pos=(415,530),size=self.score_label.texture.size)
+                                          pos=(400,530),size=self.score_label.texture.size)
         
-        self.speed_label = CoreLabel(text='Speed: 1.0',font_size=16)
+        self.speed_label = CoreLabel(text='Speed: 1.0',font_size=20)
         self.speed_label.refresh()
         self.speed_instruction = Rectangle(texture=self.speed_label.texture,
-                                         pos=(415,485),size=self.speed_label.texture.size)
+                                         pos=(400,485),size=self.speed_label.texture.size)
         
         self.canvas.add(self.lose_instruction)
         self.canvas.add(self.score_instruction)
-        self.canvas.add(self.land_instruction)
+        self.canvas.add(self.aim_instruction)
         self.canvas.add(self.speed_instruction)
         
         # graphics        
@@ -156,31 +160,45 @@ class GameWidget(Widget):
         Clock.schedule_interval(self.check_tower,0)
         
     def move_tower(self,dt):
-        step = move_towerSM.step()
+        '''
+        Oscillates the towers based on the step size from move_towerSM
+        '''
+        step_size = move_towerSM.step()
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
-            towerblock.x += step
+            towerblock.x += step_size
             towerblock.shape.pos = (towerblock.x,towerblock.y)
             towerblock.instruction.add(towerblock.shape)
             self.canvas.add(towerblock.instruction)
     
     def move_block(self,dt):
+        '''
+        Oscillates the building block based on the step size from move_blockSM
+        '''
         if self.drop == False:
+            step_size = move_blockSM.step()
             self.canvas.remove(self.next_block.instruction)
-            self.next_block.x += move_blockSM.step()*0.7
+            self.next_block.x += step_size
             self.next_block.shape.pos = (self.next_block.x,self.next_block.y)
             self.next_block.instruction.add(self.next_block.shape)
             self.canvas.add(self.next_block.instruction)
             
     def check_tower(self,dt):
+        '''
+        Removes the bottommost block if tower is more than 4 blocks tall.
+        '''
         if len(self.tower) == 5:
-            # clear the bottomest towerblock
             self.canvas.remove(self.tower[0].instruction)
             self.tower.pop(0)
+            
+            # shift remaining blocks down
             for towerblock in self.tower:                
                 towerblock.y -= towerblock.size[1]
             
     def drop_block(self,dt):
+        '''
+        Drops the building block was the SPACEBAR is pressed.
+        '''
         if self.drop == False or self.lose == True:
             return
         
@@ -189,6 +207,7 @@ class GameWidget(Widget):
         top_towerblock_y = self.tower[top_towerblock].y
         
         if current_y > top_towerblock_y+60:
+            # change y coordinate and redraw
             self.canvas.remove(self.next_block.instruction)
             self.next_block.y -= 5
             self.next_block.shape.pos = (self.next_block.x,self.next_block.y)
@@ -198,22 +217,25 @@ class GameWidget(Widget):
         if current_y == top_towerblock_y+60:
             # stop dropping
             self.drop = False
+            
+            # block has landed
             self.land = True
             self.check_landing()
     
     def check_landing(self):
+        '''
+        Checks the accuracy of the landing. Update score, speed and labels accordingly.
+        '''
         top_block = len(self.tower)-1
         top_x = self.tower[top_block].x
         top_y = self.tower[top_block].y
         width = self.tower[top_block].size[0]
         height = self.tower[top_block].size[1]
-        print('land')
-        
+                
         # failed landing
         if self.next_block.x<top_x-width or self.next_block.x>top_x+width:
             self.lose = True
-            self.update_label('lose')
-            print('lose')
+            self.update_labels('lose')
         
         # successful landing
         else:
@@ -224,8 +246,7 @@ class GameWidget(Widget):
                     move_towerSM.coeff *= 1.2
                     move_blockSM.coeff *= 1.2
                     self.speed += 0.2
-                    self.update_label('Bad..')
-                    print('bad')
+                    self.update_labels('Bad..')
                     
             # good landing        
             elif self.next_block.x<top_x-0.1*width or self.next_block.x>top_x+0.1*width:
@@ -233,19 +254,17 @@ class GameWidget(Widget):
                     move_towerSM.coeff *= 1.1
                     move_blockSM.coeff *= 1.1
                     self.speed += 0.1
-                    self.update_label('Good')
-                    print('good')
+                    self.update_labels('Good')
                     
             # great landing
             else:
-                self.update_label('Great!')
-                print('great')
+                self.update_labels('Great!')
                 if move_towerSM.coeff>2:
                     self.speed -= 0.1
                     move_towerSM.coeff *= 0.9
                     move_blockSM.coeff *= 0.9
                 
-        # append next_block to tower
+        # append next_block to self.tower
         self.tower.append(self.next_block)
         
         # reset for next landing
@@ -254,45 +273,58 @@ class GameWidget(Widget):
         self.update_score()
         self.draw_new_block()
         
-    def update_label(self,result):
+    def update_labels(self,result):
+        '''
+        Updates aim and lose label.
+        '''
         if result == 'lose':
             self.lose_label.text = "OH NO! YOU LOST!"
             self.lose_label.refresh()
             self.lose_instruction.texture = self.lose_label.texture
             self.lose_instruction.size = self.lose_label.texture.size
-            self.land_label.text = ''             
+            self.aim_label.text = ''             
         elif result == 'restart':
             self.lose_label.text = ''
             self.lose_label.refresh()
             self.lose_instruction.texture = self.lose_label.texture
             self.lose_instruction.size = self.lose_label.texture.size
-            self.land_label.text = ''
+            self.aim_label.text = ''
         else:
-            self.land_label.text = result
-        self.land_label.refresh()
-        self.land_instruction.texture = self.land_label.texture
-        self.land_instruction.size = self.land_label.texture.size
-            
-    def draw_new_block(self):
-        # create a new Block object
-        move_blockSM.start()
-        self.next_block = Block(230,520)
-        self.canvas.add(self.next_block.instruction)
+            self.aim_label.text = result
+        self.aim_label.refresh()
+        self.aim_instruction.texture = self.aim_label.texture
+        self.aim_instruction.size = self.aim_label.texture.size
         
     def update_speed(self):
+        '''
+        Updates speed label.
+        '''
         self.speed_label.text = "Speed: " + str(round(self.speed,1))
         self.speed_label.refresh()
         self.speed_instruction.texture = self.speed_label.texture
         self.speed_instruction.size = self.speed_label.texture.size
             
     def update_score(self):
+        '''
+        Updates score label.
+        '''
         self.score_label.text = "Score: " + str(self.score)
         self.score_label.refresh()
         self.score_instruction.texture = self.score_label.texture
         self.score_instruction.size = self.score_label.texture.size
+        
+    def draw_new_block(self):
+        '''
+        Creates a new Block object at the starting position.
+        '''
+        move_blockSM.start()
+        self.next_block = Block(230,520)
+        self.canvas.add(self.next_block.instruction)
             
     def restart(self):
-        # reset blocks
+        '''
+        Reset tower and building blocks, SM, class variables and labels.
+        '''
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
         self.tower = [Block(230,0)]
@@ -300,7 +332,7 @@ class GameWidget(Widget):
         self.next_block = Block(230,520)
         move_blockSM.start()
         move_towerSM.start()
-        move_blockSM.coeff = 6
+        move_blockSM.coeff = 4
         move_towerSM.coeff = 2
         
         # reset labels
@@ -309,42 +341,36 @@ class GameWidget(Widget):
         self.update_score()
         self.update_speed()
         self.drop,self.lose,self.new_start,self.land = (False,False,False,False)
-        self.update_label('restart')
-        
-        # add new highscore entry
-        if StartScreen.username not in namelist:
-            print(StartScreen.username)
+        self.update_labels('restart')
         
     def keyboard_closed(self):
-        self.keyboard.unbind(on_key_down=self.on_keyboard_down)
-        self.keyboard = None
+        pass
     
     def on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        '''
+        Listen for SPACE BAR key down to trigger self.drop_block.
+        '''
         if self.manager.current == 'play':
             if keycode[1] == 'spacebar' and self.lose == False:
                 self.drop = True
 
         
 class StartScreen(Screen):
+    username = ''
+    sorted_names = []
+    sorted_scores = []
+    
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
+        self.panel_1 = ''
+        self.panel_2 = ''
+        
+        # prepare data and string text for leaderboard
         highscores = self.check_highscores()
         sorted_names,sorted_scores = self.sort_highscores(highscores)
-        panel_1 = ''
-        panel_2 = ''
-        for i in range(0,11):
-            try:
-                if sorted_scores[i]<10:
-                    score=str(sorted_scores[i])+'  '
-                else:
-                    score=str(sorted_scores[i])
-                if i<5:
-                    panel_1+=score+'  '+sorted_names[i]+'\n'
-                else:
-                    panel_2+=score+'  '+sorted_names[i]+'\n'
-            except:
-                pass
-            
+        self.prepare_panels(sorted_names,sorted_scores)
+
+        # labels
         self.layout = FloatLayout(size=(500,650))
         
         lbl_welcome = Label(text="Welcome to \n Stack 'Em!", font_size=50, 
@@ -352,20 +378,31 @@ class StartScreen(Screen):
                             size_hint = (0.5,0.3))
         self.layout.add_widget(lbl_welcome)
         
-        lbl_highscores = Label(text="Highscores",font_size=25, 
+        lbl_leaderboard = Label(text="Leaderboard",font_size=25, 
                             pos_hint={'center_x':0.5,'y':0.42}, 
                             size_hint=(0.3,0.3))
-        self.layout.add_widget(lbl_highscores)
+        self.layout.add_widget(lbl_leaderboard)
         
-        lbl_panel_1 = Label(text=panel_1,font_size=15, 
+        self.lbl_panel_1 = Label(text=self.panel_1,font_size=15, 
                             pos_hint={'right': 0.5,'y':0.3}, 
                             size_hint=(0.3,0.3))
-        self.layout.add_widget(lbl_panel_1)
+        self.layout.add_widget(self.lbl_panel_1)
         
-        lbl_panel_2 = Label(text=panel_2,font_size=15, 
+        self.lbl_panel_2 = Label(text=self.panel_2,font_size=15, 
                             pos_hint={'x': 0.5,'y':0.3}, 
                             size_hint=(0.3,0.3))
-        self.layout.add_widget(lbl_panel_2)
+        self.layout.add_widget(self.lbl_panel_2)
+        
+        lbl_username = Label(text="Username: ",font_size=25,
+                            pos_hint={'right':0.5,'y':0.25},
+                            size_hint=(0.3,0.05))
+        self.layout.add_widget(lbl_username)
+        
+        # text input and button        
+        self.ti_username = TextInput(text='',multiline=False,
+                                pos_hint={'x':0.5,'y':0.25},
+                                size_hint=(0.3,0.05))
+        self.layout.add_widget(self.ti_username)
         
         btn_play = Button(text='Play!', font_size = 30, 
                           pos_hint={'top':0.2,'center_x':0.5}, 
@@ -373,18 +410,13 @@ class StartScreen(Screen):
                           on_release=self.change_to_play)
         self.layout.add_widget(btn_play)
         
-        lbl_username = Label(text="Username: ",font_size=25,
-                            pos_hint={'right':0.5,'y':0.25},
-                            size_hint=(0.3,0.05))
-        self.layout.add_widget(lbl_username)
-        
-        self.ti_username = TextInput(text='',multiline=False,
-                                pos_hint={'x':0.5,'y':0.25},
-                                size_hint=(0.3,0.05))
-        self.layout.add_widget(self.ti_username)
         self.add_widget(self.layout)
         
+        
     def check_highscores(self):
+        '''
+        Reads the file highscores.txt and returns a dictionary containing all the names and scores.
+        '''
         highscores = {}
         f = open("highscores.txt",'r')
         line = f.readline()
@@ -398,6 +430,9 @@ class StartScreen(Screen):
         return highscores
     
     def sort_highscores(self,highscores):
+        '''
+        Returns a list of sorted_scores in descending order and the corresponding names in sorted_names.
+        '''
         sorted_scores = []
         sorted_names = []
         namelist = list(highscores.keys())
@@ -411,41 +446,117 @@ class StartScreen(Screen):
                 if score == unsorted_scores[i]:
                     if name not in sorted_names:
                         sorted_names.append(name)
+                        
+        StartScreen.sorted_names = sorted_names
+        StartScreen.sorted_scores = sorted_scores
         return sorted_names,sorted_scores
     
+    def prepare_panels(self,sorted_names,sorted_scores):
+        '''
+        Prepares the text to be displayed on the leaderboard.
+        '''
+        for i in range(0,11):
+            try:
+                if sorted_scores[i]<10:
+                    score=str(sorted_scores[i])+'  '
+                else:
+                    score=str(sorted_scores[i])
+                if i<5:
+                    self.panel_1+=score+'  '+sorted_names[i]+'\n'
+                else:
+                    self.panel_2+=score+'  '+sorted_names[i]+'\n'
+            except:
+                pass
+        
+        # change text in lbl_panel 1 & 2
+#         self.lbl_panel_1.text = self.panel_1
+#         self.lbl_panel_2.text = self.panel_2
+    
     def change_to_play(self,value):
-        #self.manager.transition.direction='left'
-        #self.manager.current='play'
-        #self.username = self.ti_username.text
-        print(self)
-        print(self.username)
+        '''
+        Changes screen to play screen.
+        '''
+        self.manager.transition.direction='left'
+        self.manager.current='play'
+        StartScreen.username = self.ti_username.text
         
 class PlayScreen(Screen,GameWidget):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.layout = FloatLayout(size=(500,600))
-        btn_return = Button(text='Return',font_size=20,
-                           pos_hint={'top':1,'x':0},
-                           size_hint=(0.2,0.08),
+        btn_return = Button(text='Return',font_size=15,
+                           pos_hint={'top':0.8,'x':0},
+                           size_hint=(0.15,0.05),
                            on_release=self.change_to_start)
-        btn_restart = Button(text='Restart',font_size=20,
-                           pos_hint={'top':1,'x':0.8},
-                           size_hint=(0.2,0.08),
-                           on_release=self.restart_game)
         self.layout.add_widget(btn_return)
+        
+        btn_restart = Button(text='Restart',font_size=15,
+                           pos_hint={'top':0.72,'x':0},
+                           size_hint=(0.15,0.05),
+                           on_release=self.restart_game)
         self.layout.add_widget(btn_restart)
+        
+        btn_save = Button(text='Save',font_size=15,
+                           pos_hint={'top':0.64,'x':0},
+                           size_hint=(0.15,0.05),
+                           on_release=self.save_game)        
+        self.layout.add_widget(btn_save)
+        
         self.add_widget(self.layout)
                 
     def change_to_start(self,value):
+        '''
+        Changes screen to start screen.
+        '''
         self.manager.transition.direction='right'
         self.manager.current='start'
+#         self.manage_highscores(self)
+        
+#     def manage_highscores(self,value):
+#         '''
+#         Update the highscores and display leaderboard.
+#         '''
+#         highscores = StartScreen.check_highscores(self)
+#         sorted_names,sort_scores = StartScreen.sort_highscores(self,highscores)
+#         StartScreen.prepare_panels(self,sorted_names,sort_scores)
         
     def restart_game(self,value):
+        '''
+        Restarts the game upon pressing the restart button.
+        '''
         GameWidget.restart(self)
         
+    def save_game(self,value):
+        '''
+        Saves the player's username and score into the file highscores.txt.
+        '''       
+        if StartScreen.username == '':
+            return
+        elif StartScreen.username not in StartScreen.sorted_names:
+            # add new entry if username does not exist 
+            f = open('highscores.txt','a')
+            f.write('{},{}\n'.format(StartScreen.username,self.score))
+        else:
+            # update the username's if it is a new highscore
+            new_text = ''
+            f = open('highscores.txt','w')
+            for pos,name in enumerate(StartScreen.sorted_names):
+                if name == StartScreen.username:
+                    previous_score = int(StartScreen.sorted_scores[pos])
+                    if previous_score < self.score:
+                        StartScreen.sorted_scores[pos] = str(self.score)
+            for i in range(len(StartScreen.sorted_names)):
+                new_text += StartScreen.sorted_names[i]+','+str(StartScreen.sorted_scores[i])+'\n'
+            f.write(new_text)
+        f.close()
+        
+# Run the game        
 class StackEmApp(App):
     def build(self):
+        '''
+        Add screens to SreenManager
+        '''
         sm = ScreenManager()
         start_screen = StartScreen(name='start')
         play_screen = PlayScreen(name='play')
@@ -453,9 +564,6 @@ class StackEmApp(App):
         sm.add_widget(play_screen)
         sm.current = 'start'
         return sm
-    
-username = ''
-namelist = []
     
 Window.size = (500,600)    
 StackEmApp().run()
