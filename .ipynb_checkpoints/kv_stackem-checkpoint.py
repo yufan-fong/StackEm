@@ -10,28 +10,16 @@ from kivy.graphics.context_instructions import Color
 from kivy.clock import Clock
 
 Window.size = (500,650)
-start_x,start_y = (230,570)
-loopCount = 1
 
 class Block:
     def __init__(self,x,y):
         self.x = x
         self.y = y
-        self.pos = (self.x,self.y)
         self.size = (40,60)
         
         # get the next colour each time a new block is created
         colour_machine.step()
         self.colour = colour_machine.state
-        
-    def draw(self):
-        if self.colour == 'red':
-            Color(1,0,0,1)
-        elif self.colour == 'green':
-            Color(0,1,0,1)
-        elif self.colour == 'blue':
-            Color(0,0,1,1)
-        Rectangle(pos=self.pos,size=self.size)
 
 class SM:    
     '''Custom state machine parent class that does not require input'''
@@ -67,8 +55,9 @@ colour_machine.start()
 
 class GameWidget(Widget):
     drop, lose = (False,False)
+    new_start = True
     base_block = Block(230,0)
-    tpwer = [base_block]
+    tower = [base_block]
     
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -76,32 +65,60 @@ class GameWidget(Widget):
         self.keyboard.bind(on_key_down=self.on_keyboard_down)
         
         with self.canvas:
-            for block in self.tower:
-                block.draw()
-            Color(0,1,0,1)
-#             self.next_block = Block(230,570)
-#             self.next_block.draw()
-#             next_block = Block(230,570)
-#             next_block.draw()
-#             self.next_block = next_block
-            self.next_block = Rectangle(pos=(230,570),size=(40,60))
             Color(1,1,1,1)
-            Line(points=[0,570,500,570],width=2)
-            
-        # execute move_step every frame
-        Clock.schedule_interval(self.move_step,1)
+            Line(points=[0,568,500,568],width=2)
+        
+        delay = 0
+        Clock.schedule_interval(self.draw_tower,delay)
+        Clock.schedule_interval(self.draw_next_block,delay)            
+        Clock.schedule_interval(self.drop_next_block,delay)
+        
+    def draw_tower(self,dt):
+        with self.canvas:
+            for block in self.tower:
+                if block.colour == 'red':
+                    Color(1,0,0,1)
+                elif block.colour == 'green':
+                    Color(0,1,0,1)
+                elif block.colour == 'blue':
+                    Color(0,0,1,1)
+                Rectangle(pos=(block.x,block.y),size=block.size)
+                
+    def draw_next_block(self,dt):
+        if self.new_start == True:
+            # create a new Block object
+            self.next_block = Block(230,570)
+            with self.canvas:
+                if self.next_block.colour == 'red':
+                    Color(1,0,0,1)
+                elif self.next_block.colour == 'green':
+                    Color(0,1,0,1)
+                elif self.next_block.colour == 'blue':
+                    Color(0,0,1,1)
+                # draw the new Block object on canvas &
+                # call it new_block_canvas
+                self.new_block_canvas = Rectangle(pos=(self.next_block.x,self.next_block.y),size=self.next_block.size)
+                self.new_start = False
+                
         
     def drop_next_block(self,dt):
-        current_y = self.next_block.pos[1]
+        current_y = self.new_block_canvas.pos[1]
         top_block = len(self.tower)-1
-        landing_line = self.tower[top_block].y
-        if self.drop == True and current_y > landing_line+60:
-            current_y -= 5
-            if current_y == landing_line+60:
-                self.drop = False
-                self.tower.append(self.next_block)
-            self.next_block.pos = (self.next_block.pos[0],current_y)
-        
+        top_block_y = self.tower[top_block].y
+        # comparing y values
+        if self.drop == True and current_y > top_block_y+60:
+            current_y -= 10
+            # redraw the block on canvas
+            self.new_block_canvas.pos = (self.new_block_canvas.pos[0],current_y)
+        if current_y == top_block_y+60:
+            # stop dropping
+            self.drop = False
+            # change position of next_block
+            self.next_block.x,self.next_block.y = self.new_block_canvas.pos
+            self.tower.append(self.next_block)
+            self.new_start = True
+            
+            
     def keyboard_closed(self):
         self.keyboard.unbind(on_key_down=self.on_keyboard_down)
         self.keyboard = None
@@ -109,7 +126,6 @@ class GameWidget(Widget):
     def on_keyboard_down(self, keyboard, keycode, text, modifiers):
         if keycode[1] == 'spacebar' and self.lose == False:
             self.drop = True
-            print('space bar pressed')
     
     def next_level(next_block,top_block):
         if next_block.x < top_block.x-40 or next_block.x > topblock.x+40:
@@ -119,6 +135,7 @@ class GameWidget(Widget):
         if nextBlock.x < topBlock_x-5 or nextBlock.x > topBlock_x+5:
             pass
 
+        
 class StartScreen(Screen):
     def __init__(self, **kwargs):
         Screen.__init__(self, **kwargs)
@@ -161,7 +178,7 @@ class StackEmApp(App):
         play_screen = PlayScreen(name='play')
         sm.add_widget(start_screen)
         sm.add_widget(play_screen)
-        sm.current = 'start'
+        sm.current = 'play'
         return sm
     
 StackEmApp().run()
