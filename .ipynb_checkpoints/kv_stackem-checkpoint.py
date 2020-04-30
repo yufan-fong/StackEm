@@ -11,7 +11,6 @@ from kivy.graphics.context_instructions import Color
 from kivy.clock import Clock
 from kivy.graphics.instructions import InstructionGroup
 import numpy as np
-import time
 
 
 class Block:
@@ -150,12 +149,12 @@ class GameWidget(Widget):
         self.score_label = CoreLabel(text='Score: 0',font_size=20)
         self.score_label.refresh()
         self.score_instruction = Rectangle(texture=self.score_label.texture,
-                                          pos=(400,530),size=self.score_label.texture.size)
+                                          pos=(390,530),size=self.score_label.texture.size)
         
         self.speed_label = CoreLabel(text='Speed: 1.0',font_size=20)
         self.speed_label.refresh()
         self.speed_instruction = Rectangle(texture=self.speed_label.texture,
-                                         pos=(400,485),size=self.speed_label.texture.size)
+                                         pos=(390,485),size=self.speed_label.texture.size)
         
         self.canvas.add(self.lose_instruction)
         self.canvas.add(self.score_instruction)
@@ -184,7 +183,7 @@ class GameWidget(Widget):
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
             if self.started == True:
-                towerblock.y -= 0.05
+                towerblock.y -= 0.1
             towerblock.x += step_size
             towerblock.shape.pos = (towerblock.x,towerblock.y)
             towerblock.instruction.add(towerblock.shape)
@@ -208,13 +207,19 @@ class GameWidget(Widget):
         Removes the bottommost block if 
         tower is more than 4 blocks tall.
         '''
+        for i,towerblock in enumerate(self.tower):
+            if towerblock.y <-60:
+                        self.canvas.remove(self.tower[0].instruction)
+                        self.tower.pop(i)
+                    
         if len(self.tower) == 6:
             self.canvas.remove(self.tower[0].instruction)
             self.tower.pop(0)
             
             # shift remaining blocks down
-            for towerblock in self.tower:                
+            for towerblock in self.tower:
                 towerblock.y -= towerblock.size[1]
+                
             
     def drop_block(self,dt):
         '''
@@ -268,17 +273,17 @@ class GameWidget(Widget):
             if self.next_block.x<top_x-0.5*width or self.next_block.x>top_x+0.5*width:
                 self.update_labels('Bad..')
                 if move_towerSM.coeff<=14:
-                    move_towerSM.coeff *= 1.2
-                    move_blockSM.coeff *= 1.2
-                    self.speed += 0.2                    
+                    move_towerSM.coeff *= 1.1
+                    move_blockSM.coeff *= 1.1
+                    self.speed += 0.1            
                     
             # good landing        
             elif self.next_block.x<top_x-0.1*width or self.next_block.x>top_x+0.1*width:
                 self.update_labels('Good')
                 if move_towerSM.coeff<=14:
-                    move_towerSM.coeff *= 1.1
-                    move_blockSM.coeff *= 1.1
-                    self.speed += 0.1
+                    move_towerSM.coeff *= 1.05
+                    move_blockSM.coeff *= 1.05
+                    self.speed += 0.05
                     
             # great landing
             else:
@@ -326,7 +331,7 @@ class GameWidget(Widget):
         '''
         Updates speed label.
         '''
-        self.speed_label.text = "Speed: " + str(round(self.speed,1))
+        self.speed_label.text = "Speed: " + str(round(self.speed,2))
         self.speed_label.refresh()
         self.speed_instruction.texture = self.speed_label.texture
         self.speed_instruction.size = self.speed_label.texture.size
