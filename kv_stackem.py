@@ -11,7 +11,7 @@ from kivy.graphics.context_instructions import Color
 from kivy.clock import Clock
 from kivy.graphics.instructions import InstructionGroup
 import numpy as np
-import random
+import time
 
 
 class Block:
@@ -117,12 +117,13 @@ move_towerSM.coeff = 2
 
 
 class GameWidget(Widget):
-    drop,lose = (False,False)
+    drop,lose,started = (False,False,False)
     tower = [Block(230,0)]
     next_block = Block(230,520)
     
     score = 0
     speed = 1.0
+    vibrate = 1
     
     def __init__(self,**kwargs):
         Widget.__init__(self,**kwargs)
@@ -169,7 +170,7 @@ class GameWidget(Widget):
         self.canvas.add(self.next_block.instruction)
         
         # run these functions continuously
-        Clock.schedule_interval(self.move_tower,0.02)
+        self.move_tower_event = Clock.schedule_interval(self.move_tower,0.02)
         Clock.schedule_interval(self.move_block, 0.04)
         Clock.schedule_interval(self.drop_block,0)
         Clock.schedule_interval(self.check_tower,0)
@@ -182,7 +183,8 @@ class GameWidget(Widget):
         step_size = move_towerSM.step()
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
-            towerblock.y -= 0.05
+            if self.started == True:
+                towerblock.y -= 0.05
             towerblock.x += step_size
             towerblock.shape.pos = (towerblock.x,towerblock.y)
             towerblock.instruction.add(towerblock.shape)
@@ -346,25 +348,23 @@ class GameWidget(Widget):
         self.next_block = Block(230,520)
         self.canvas.add(self.next_block.instruction)
         
-    def vibrate_tower(self,dt):
-        '''
-        Animate collapsing of the tower when user loses.
-        '''
-        for i,towerblock in enumerate(self.tower):
-            print(i,towerblock)
-            
-#             self.canvas.remove(towerblock.instruction)
-#             towerblock.y -= 0.05
-#             towerblock.x += step_size
-#             towerblock.shape.pos = (towerblock.x,towerblock.y)
-#             towerblock.instruction.add(towerblock.shape)
-#             self.canvas.add(towerblock.instruction)
-        
     def restart(self):
         '''
         Reset tower and building blocks, 
         SM, class variables and labels.
         '''
+        if self.started == False:
+            return True
+        try:
+            Clock.unschedule(self.vibrate_event)
+            self.unvibrate.cancel()
+        except:
+            pass
+        try:
+            Clock.unschedule(self.collapse_event)
+        except:
+            pass
+        
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
         self.tower = [Block(230,0)]
@@ -375,33 +375,70 @@ class GameWidget(Widget):
         move_blockSM.coeff = 4
         move_towerSM.coeff = 2
         
+        if self.lose == True:
+            # schedule move_tower_event again only after player loses
+            self.move_tower_event = Clock.schedule_interval(self.move_tower,0.02)
+        
         # reset labels
         self.score = 0
         self.speed = 1.0
         self.update_score()
         self.update_speed()
         self.update_labels('restart')
-        self.drop,self.lose = (False,False)
+        self.drop,self.lose,self.started = (False,False,False)
+        
         
     def on_land(self,dt):
         '''
         Default handler for the custom event 'on_land'.
         '''
-        pass
+        self.started = True
     
     def on_lose(self,dt):
         '''
         Schedules and unschedules the vibrate and collapse event.
         '''
-        self.vibrate_event = Clock.schedule_interval(self.vibrate_tower,0)
-        Clock.schedule_once(self.unschedule,1)
+        Clock.unschedule(self.move_tower_event)
+        self.vibrate_event = Clock.schedule_interval(self.vibrate_tower,0.06)
+        self.unvibrate = Clock.schedule_once(self.unschedule_vibrate,0.8)
+    
+    def vibrate_tower(self,dt):
+        '''
+        Animate collapsing of the tower when user loses.
+        '''
+        for i,towerblock in enumerate(self.tower):
+            self.canvas.remove(towerblock.instruction)
+            if i%2 == 0:
+                towerblock.x += self.vibrate*4
+            else:
+                towerblock.x -= self.vibrate*4
+            towerblock.shape.pos = (towerblock.x,towerblock.y)
+            towerblock.instruction.add(towerblock.shape)
+            self.canvas.add(towerblock.instruction)
+            
+        self.vibrate *= -1            
         
-    def unschedule(self,dt):
-        '''
-        Unschedules the event passed in the argument.
-        '''
+    def collapse_tower(self,dt):
+        for i,towerblock in enumerate(self.tower):
+            self.canvas.remove(towerblock.instruction)
+            if i%2 == 0:
+                towerblock.x -= 1
+            else:
+                towerblock.x += 1
+            towerblock.y -= 4
+            towerblock.shape.pos = (towerblock.x,towerblock.y)
+            towerblock.instruction.add(towerblock.shape)
+            self.canvas.add(towerblock.instruction)
+        
+    def unschedule_vibrate(self,dt):
         Clock.unschedule(self.vibrate_event)
-        print('Unscheduled!')
+        print('Unscheduled vibrate!')
+        self.collapse_event = Clock.schedule_interval(self.collapse_tower,0)
+        Clock.schedule_once(self.unschedule_collapse,1.5)
+        
+    def unschedule_collapse(self,dt):
+        Clock.unschedule(self.collapse_event)
+        print('Unscheduled collapse!')
     
     def keyboard_closed(self):
         pass
