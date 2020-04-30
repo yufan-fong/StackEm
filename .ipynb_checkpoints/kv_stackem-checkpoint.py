@@ -350,11 +350,13 @@ class GameWidget(Widget):
         
     def restart(self):
         '''
-        Reset tower and building blocks, 
-        SM, class variables and labels.
+        Reset tower and building blocks, SM, class variables and labels.
+        Unschedules vibrate and collapse event if any.
+        Reschedules move_tower_event if player lost.
         '''
         if self.started == False:
             return True
+        
         try:
             Clock.unschedule(self.vibrate_event)
             self.unvibrate.cancel()
@@ -396,7 +398,7 @@ class GameWidget(Widget):
     
     def on_lose(self,dt):
         '''
-        Schedules and unschedules the vibrate and collapse event.
+        Schedules and unschedules the vibrate event.
         '''
         Clock.unschedule(self.move_tower_event)
         self.vibrate_event = Clock.schedule_interval(self.vibrate_tower,0.06)
@@ -404,7 +406,7 @@ class GameWidget(Widget):
     
     def vibrate_tower(self,dt):
         '''
-        Animate collapsing of the tower when user loses.
+        Canvas instructions to animate vibrating.
         '''
         for i,towerblock in enumerate(self.tower):
             self.canvas.remove(towerblock.instruction)
@@ -419,6 +421,9 @@ class GameWidget(Widget):
         self.vibrate *= -1            
         
     def collapse_tower(self,dt):
+        '''
+        Canvas instructions to animate collapsing.
+        '''
         for i,towerblock in enumerate(self.tower):
             self.canvas.remove(towerblock.instruction)
             if i%2 == 0:
@@ -431,14 +436,18 @@ class GameWidget(Widget):
             self.canvas.add(towerblock.instruction)
         
     def unschedule_vibrate(self,dt):
+        '''
+        Unschedules vibrate event, schedules collapse event.
+        '''
         Clock.unschedule(self.vibrate_event)
-        print('Unscheduled vibrate!')
         self.collapse_event = Clock.schedule_interval(self.collapse_tower,0)
         Clock.schedule_once(self.unschedule_collapse,1.5)
         
     def unschedule_collapse(self,dt):
+        '''
+        Unschedules collapse event.
+        '''
         Clock.unschedule(self.collapse_event)
-        print('Unscheduled collapse!')
     
     def keyboard_closed(self):
         pass
