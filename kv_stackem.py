@@ -11,6 +11,7 @@ from kivy.graphics.context_instructions import Color
 from kivy.clock import Clock
 from kivy.graphics.instructions import InstructionGroup
 import numpy as np
+import random
 
 
 class Block:
@@ -132,6 +133,7 @@ class GameWidget(Widget):
         # custom events
         self.register_event_type('on_land')
         self.bind(on_land=self.check_landing)
+        self.register_event_type('on_lose')
         
         # canvas core labels        
         self.lose_label = CoreLabel(text='',font_size=40)
@@ -180,6 +182,7 @@ class GameWidget(Widget):
         step_size = move_towerSM.step()
         for towerblock in self.tower:
             self.canvas.remove(towerblock.instruction)
+            towerblock.y -= 0.05
             towerblock.x += step_size
             towerblock.shape.pos = (towerblock.x,towerblock.y)
             towerblock.instruction.add(towerblock.shape)
@@ -203,7 +206,7 @@ class GameWidget(Widget):
         Removes the bottommost block if 
         tower is more than 4 blocks tall.
         '''
-        if len(self.tower) == 5:
+        if len(self.tower) == 6:
             self.canvas.remove(self.tower[0].instruction)
             self.tower.pop(0)
             
@@ -253,6 +256,7 @@ class GameWidget(Widget):
         if self.next_block.x<top_x-width or self.next_block.x>top_x+width:
             self.lose = True
             self.update_labels('lose')
+            self.dispatch('on_lose',1)
         
         # successful landing
         else:
@@ -341,7 +345,21 @@ class GameWidget(Widget):
         move_blockSM.start()
         self.next_block = Block(230,520)
         self.canvas.add(self.next_block.instruction)
+        
+    def vibrate_tower(self,dt):
+        '''
+        Animate collapsing of the tower when user loses.
+        '''
+        for i,towerblock in enumerate(self.tower):
+            print(i,towerblock)
             
+#             self.canvas.remove(towerblock.instruction)
+#             towerblock.y -= 0.05
+#             towerblock.x += step_size
+#             towerblock.shape.pos = (towerblock.x,towerblock.y)
+#             towerblock.instruction.add(towerblock.shape)
+#             self.canvas.add(towerblock.instruction)
+        
     def restart(self):
         '''
         Reset tower and building blocks, 
@@ -369,7 +387,21 @@ class GameWidget(Widget):
         '''
         Default handler for the custom event 'on_land'.
         '''
-        pass       
+        pass
+    
+    def on_lose(self,dt):
+        '''
+        Schedules and unschedules the vibrate and collapse event.
+        '''
+        self.vibrate_event = Clock.schedule_interval(self.vibrate_tower,0)
+        Clock.schedule_once(self.unschedule,1)
+        
+    def unschedule(self,dt):
+        '''
+        Unschedules the event passed in the argument.
+        '''
+        Clock.unschedule(self.vibrate_event)
+        print('Unscheduled!')
     
     def keyboard_closed(self):
         pass
